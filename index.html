@@ -385,7 +385,7 @@ function renderEmployees(mc) {
     (!f||e.name.toLowerCase().includes(f)||(e.role||'').toLowerCase().includes(f))&&
     (!bf||e.branch_id===bf)
   );
-  const totalPayroll=state.employees.reduce((s,e)=>s+(+e.wage||0)*(+e.hours||0),0);
+  const totalPayroll=filtered.reduce((s,e)=>s+(+e.wage||0)*(+e.hours||0)*2,0);
 
   mc.innerHTML=`
     <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">

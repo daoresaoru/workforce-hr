@@ -425,7 +425,7 @@ function renderEmployees(mc) {
               ${filtered.length===0?`<tr><td colspan="10"><div class="empty-state"><div class="eicon">👥</div>No employees found</div></td></tr>`:
                 filtered.map(e=>{
                   const docs=Array.isArray(e.docs)?e.docs:[];
-                  return `<tr class="${isAdmin()?'clickable':''}" ${isAdmin()?`onclick="openEditEmployee('${e.id}')"`:''}
+                  return `<tr class="${isAdmin()?'clickable':''}" ${isAdmin()?`onclick="openEditEmployee('${e.id}')"`:''}>
                     <td><div class="avatar">${initials(e.name)}</div></td>
                     <td style="font-weight:500">${e.name}${e.status==='terminated'?' <span class="badge badge-red">Terminated</span>':e.status==='inactive'?' <span class="badge badge-gray">Inactive</span>':''}</td>
                     <td><span class="badge badge-blue">${branchName(e.branch_id)}</span></td>

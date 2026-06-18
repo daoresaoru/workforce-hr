@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WorkForce HR</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg:#fafaf9;--bg2:#f4f3f0;--bg3:#eceae4;--surface:#fff;
+    --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+    --text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;
+    --blue:#185FA5;--blue-bg:#E6F1FB;--blue-text:#0C447C;
+    --green:#3B6D11;--green-bg:#EAF3DE;--green-text:#27500A;
+    --amber-bg:#FAEEDA;--amber-text:#633806;
+    --red:#A32D2D;--red-bg:#FCEBEB;--red-text:#791F1F;
+    --gray-bg:#F1EFE8;--gray-text:#444441;
+    --radius:8px;--radius-lg:12px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#1a1a18;--bg2:#222220;--bg3:#2a2a27;--surface:#222220;
+      --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
+      --text:#f0ede8;--text2:#a0a09b;--text3:#606058;
+      --blue-bg:#0c2a45;--blue-text:#85B7EB;
+      --green-bg:#172b08;--green-text:#97C459;
+      --amber-bg:#2e1f05;--amber-text:#FAC775;
+      --red-bg:#2a1010;--red-text:#F09595;
+      --gray-bg:#2c2c2a;--gray-text:#D3D1C7;
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+
+  /* ── AUTH SCREEN ── */
+  .auth-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg2);padding:16px;}
+  .auth-box{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:36px 32px;width:380px;max-width:100%;}
+  .auth-box h1{font-size:20px;font-weight:700;letter-spacing:-0.03em;margin-bottom:4px;}
+  .auth-box .sub{font-size:13px;color:var(--text2);margin-bottom:24px;}
+  .auth-box .form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+  .auth-box label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;}
+  .auth-box input{padding:9px 11px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;transition:border-color .1s;}
+  .auth-box input:focus{outline:none;border-color:var(--blue);}
+  .auth-box .btn-full{width:100%;padding:10px;border:none;border-radius:var(--radius);background:var(--blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .1s;font-family:inherit;}
+  .auth-box .btn-full:hover{background:var(--blue-text);}
+  .auth-box .btn-full:disabled{opacity:.5;cursor:not-allowed;}
+  .auth-toggle{text-align:center;margin-top:16px;font-size:13px;color:var(--text2);}
+  .auth-toggle a{color:var(--blue);cursor:pointer;text-decoration:none;}
+  .auth-toggle a:hover{text-decoration:underline;}
+  .auth-error{background:var(--red-bg);color:var(--red-text);border:0.5px solid var(--red-text);border-radius:var(--radius);padding:8px 12px;font-size:13px;margin-bottom:14px;}
+  .auth-info{background:var(--green-bg);color:var(--green-text);border:0.5px solid var(--green-text);border-radius:var(--radius);padding:8px 12px;font-size:13px;margin-bottom:14px;}
+
+  /* ── LAYOUT ── */
+  .app{display:flex;height:100vh;overflow:hidden;}
+  .sidebar{width:210px;min-width:210px;background:var(--bg2);border-right:0.5px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+  .logo{padding:18px 16px 14px;border-bottom:0.5px solid var(--border);}
+  .logo h1{font-size:16px;font-weight:600;letter-spacing:-.02em;}
+  .logo p{font-size:11px;color:var(--text2);margin-top:2px;}
+  .nav-section{padding:10px 0 4px;}
+  .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:0 16px 4px;}
+  .nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:13px;color:var(--text2);border-left:2px solid transparent;transition:all .12s;user-select:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:var(--surface);color:var(--text);border-left-color:var(--blue);font-weight:500;}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{padding:12px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);flex-shrink:0;}
+  .topbar h2{font-size:15px;font-weight:600;}
+  .topbar-right{display:flex;gap:8px;align-items:center;}
+  .content{padding:20px;overflow-y:auto;flex:1;}
+
+  /* ── BUTTONS ── */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;color:var(--text);transition:background .1s,opacity .1s;font-family:inherit;white-space:nowrap;}
+  .btn:hover{background:var(--bg2);}
+  .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .btn.primary:hover{background:var(--blue-text);}
+  .btn.success{background:var(--green);color:#fff;border-color:var(--green);}
+  .btn.success:hover{background:var(--green-text);}
+  .btn.danger{color:var(--red);border-color:rgba(163,45,45,.3);background:transparent;}
+  .btn.danger:hover{background:var(--red-bg);}
+  .btn.sm{padding:4px 9px;font-size:12px;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  /* ── VIEWER BADGE ── */
+  .role-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;}
+  .role-admin{background:var(--blue-bg);color:var(--blue-text);}
+  .role-viewer{background:var(--gray-bg);color:var(--gray-text);}
+  .viewer-bar{background:var(--amber-bg);color:var(--amber-text);padding:7px 20px;font-size:12px;text-align:center;border-bottom:0.5px solid var(--amber-text);flex-shrink:0;}
+
+  /* ── STATS ── */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+  .stat-card{background:var(--bg2);border-radius:var(--radius);padding:14px 16px;}
+  .stat-card .lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+  .stat-card .val{font-size:22px;font-weight:600;letter-spacing:-.03em;}
+
+  /* ── TABLE ── */
+  .table-wrap{border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:var(--bg2);padding:9px 12px;text-align:left;font-weight:500;font-size:11px;color:var(--text2);border-bottom:0.5px solid var(--border);white-space:nowrap;}
+  td{padding:10px 12px;border-bottom:0.5px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr.clickable:hover td{background:var(--bg2);cursor:pointer;}
+
+  /* ── BADGES ── */
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;}
+  .badge-blue{background:var(--blue-bg);color:var(--blue-text);}
+  .badge-green{background:var(--green-bg);color:var(--green-text);}
+  .badge-amber{background:var(--amber-bg);color:var(--amber-text);}
+  .badge-red{background:var(--red-bg);color:var(--red-text);}
+  .badge-gray{background:var(--gray-bg);color:var(--gray-text);}
+
+  /* ── MODAL ── */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .modal{background:var(--surface);border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:24px;width:560px;max-width:100%;max-height:90vh;overflow-y:auto;}
+  .modal h3{font-size:15px;font-weight:600;margin-bottom:18px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-group{display:flex;flex-direction:column;gap:5px;}
+  .form-group.full{grid-column:1/-1;}
+  .form-group label{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;}
+  .form-group input,.form-group select,.form-group textarea{padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;transition:border-color .1s;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--blue);}
+  .form-group textarea{resize:vertical;min-height:64px;}
+  .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border);}
+  .modal-footer-split{display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border);}
+
+  /* ── FILTERS ── */
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+  .filters input,.filters select{padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;}
+  .filters input{flex:1;min-width:160px;}
+
+  /* ── GROUP CARDS ── */
+  .group-card{border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;}
+  .group-header{padding:13px 16px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between;}
+  .group-header strong{font-size:14px;}
+  .group-header .meta{font-size:12px;color:var(--text2);margin-left:10px;}
+  .group-member{padding:10px 16px;border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:13px;gap:12px;}
+
+  /* ── TASKS ── */
+  .task-item{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;background:var(--surface);}
+  .task-item.done{opacity:.5;}
+  .task-check{width:18px;height:18px;border:1.5px solid var(--border2);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;transition:all .15s;}
+  .task-check.checked{background:var(--green);border-color:var(--green);}
+  .task-body{flex:1;min-width:0;}
+  .task-title{font-size:13px;font-weight:500;}
+  .task-item.done .task-title{text-decoration:line-through;}
+  .task-meta{font-size:12px;color:var(--text2);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  .reminder-chip{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--amber-bg);color:var(--amber-text);}
+  .overdue{color:var(--red-text)!important;}
+
+  /* ── MISC ── */
+  .avatar{width:28px;height:28px;border-radius:50%;background:var(--blue-bg);color:var(--blue-text);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;}
+  .empty-state{text-align:center;padding:56px 24px;color:var(--text2);}
+  .empty-state .eicon{font-size:36px;margin-bottom:10px;}
+  .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-overlay{display:flex;align-items:center;justify-content:center;padding:60px;}
+
+  /* ── USER MGMT ── */
+  .user-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--border);}
+  .user-row:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+
+<!-- Auth screen shown before login -->
+<div id="auth-screen" style="display:none">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <h1>WorkForce HR</h1>
+      <p class="sub" id="auth-sub">Sign in to your account</p>
+      <div id="auth-msg"></div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="form-group" id="auth-name-wrap" style="display:none">
+        <label>Full Name</label>
+        <input type="text" id="auth-name" placeholder="Jane Doe">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn-full" id="auth-btn" onclick="authSubmit()">Sign In</button>
+      <div class="auth-toggle">
+        <span id="auth-toggle-text">Don't have an account?</span>
+        <a onclick="toggleAuthMode()"> <span id="auth-toggle-link">Sign up</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main app (hidden until logged in) -->
+<div id="app-screen" style="display:none">
+  <div class="app">
+    <div class="sidebar">
+      <div class="logo">
+        <h1>WorkForce</h1>
+        <p>HR Management</p>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Database</div>
+        <div class="nav-item active" id="nav-employees" onclick="showView('employees')">👥 Employees</div>
+        <div class="nav-item" id="nav-branches" onclick="showView('branches')">🏢 Branches</div>
+        <div class="nav-item" id="nav-llc" onclick="showView('llc')">💼 LLC Groups</div>
+        <div class="nav-item" id="nav-tasks" onclick="showView('tasks')">✅ Tasks</div>
+        <div class="nav-item" id="nav-summary" onclick="showView('summary')">📊 Payroll Summary</div>
+        <div class="nav-item" id="nav-users" style="display:none" onclick="showView('users')">👤 Users</div>
+      </div>
+      <div style="margin-top:auto;padding:12px 16px;border-top:0.5px solid var(--border);">
+        <div id="sidebar-user" style="font-size:12px;color:var(--text2);margin-bottom:8px;"></div>
+        <button class="btn sm" style="width:100%;justify-content:center" onclick="signOut()">🚪 Sign Out</button>
+      </div>
+    </div>
+    <div class="main">
+      <div id="viewer-bar" style="display:none" class="viewer-bar">👁 View only — contact an admin to make changes</div>
+      <div id="main-content" style="display:contents"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+// ─── SUPABASE ──────────────────────────────────────────────────────────────────
+const sbUrl = 'https://reetcnucjmuffkpucrki.supabase.co';
+const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlZXRjbnVjam11ZmZrcHVjcmtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMzc4MTUsImV4cCI6MjA5NjcxMzgxNX0.UvEHPlyaT7s9vYN8KTuvvQlG8yoBgf_K4JlowiZ5XXE';
+const sb = supabase.createClient(sbUrl, sbKey);
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentUser = null;
+let currentRole = 'viewer'; // 'admin' | 'viewer'
+let authMode = 'signin'; // 'signin' | 'signup'
+
+let state = {
+  view: 'employees',
+  employees: [], branches: [], tasks: [], users: [],
+  loading: false, empFilter: '', branchFilter: '', taskFilter: 'all',
+};
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const isAdmin = () => currentRole === 'admin';
+const initials = n => (n||'?').split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2);
+const fmtMoney = n => '$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+function biWeeklyPay(e) {
+  if (e.pay_type === 'salary') return (+e.salary||0) / 2.17;
+  return (+e.wage||0) * (+e.hours||0) * 2;
+}
+const todayStr = () => new Date().toISOString().slice(0,10);
+const isOverdue = d => d && d < todayStr();
+const branchName = id => { const b=state.branches.find(x=>x.id===id); return b?b.name:'—'; };
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  const isSignup = authMode === 'signup';
+  document.getElementById('auth-sub').textContent = isSignup ? 'Create your account' : 'Sign in to your account';
+  document.getElementById('auth-btn').textContent = isSignup ? 'Sign Up' : 'Sign In';
+  document.getElementById('auth-toggle-text').textContent = isSignup ? 'Already have an account?' : "Don't have an account?";
+  document.getElementById('auth-toggle-link').textContent = isSignup ? 'Sign in' : 'Sign up';
+  document.getElementById('auth-name-wrap').style.display = isSignup ? '' : 'none';
+  document.getElementById('auth-msg').innerHTML = '';
+}
+
+function showAuthMsg(msg, type='error') {
+  document.getElementById('auth-msg').innerHTML =
+    `<div class="${type==='error'?'auth-error':'auth-info'}">${msg}</div>`;
+}
+
+async function authSubmit() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const name = document.getElementById('auth-name')?.value.trim();
+  if (!email || !password) { showAuthMsg('Please fill in all fields.'); return; }
+  const btn = document.getElementById('auth-btn');
+  btn.disabled = true;
+  btn.textContent = authMode === 'signin' ? 'Signing in…' : 'Creating account…';
+  document.getElementById('auth-msg').innerHTML = '';
+
+  try {
+    if (authMode === 'signup') {
+      const { error } = await sb.auth.signUp({
+        email, password,
+        options: { data: { full_name: name } }
+      });
+      if (error) throw error;
+      showAuthMsg('Account created! You can now sign in. An admin will need to approve your access level.', 'info');
+      authMode = 'signin';
+      toggleAuthMode();
+    } else {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      await onSignedIn(data.user);
+    }
+  } catch(e) {
+    showAuthMsg(e.message || 'Something went wrong.');
+  }
+  btn.disabled = false;
+  btn.textContent = authMode === 'signin' ? 'Sign In' : 'Sign Up';
+}
+
+async function onSignedIn(user) {
+  currentUser = user;
+  // Fetch role
+  const { data: roleData } = await sb.from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
+  currentRole = roleData?.role || 'viewer';
+
+  // Update sidebar
+  const email = user.email || '';
+  const name = user.user_metadata?.full_name || email.split('@')[0];
+  document.getElementById('sidebar-user').innerHTML =
+    `<div style="font-weight:500;margin-bottom:4px">${name}</div>
+     <span class="role-badge ${isAdmin()?'role-admin':'role-viewer'}">${isAdmin()?'⚡ Admin':'👁 Viewer'}</span>`;
+
+  // Show users tab only to admins
+  document.getElementById('nav-users').style.display = isAdmin() ? '' : 'none';
+  // Show viewer bar to viewers
+  document.getElementById('viewer-bar').style.display = isAdmin() ? 'none' : '';
+
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = '';
+  await loadAll();
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null; currentRole = 'viewer';
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = '';
+  document.getElementById('auth-msg').innerHTML = '';
+}
+
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  state.loading = true; render();
+  const [bRes, eRes, tRes] = await Promise.all([
+    sb.from('branches').select('*').order('name'),
+    sb.from('employees').select('*').order('name'),
+    sb.from('tasks').select('*').order('created_at'),
+  ]);
+  state.branches = bRes.data||[];
+  state.employees = eRes.data||[];
+  state.tasks = tRes.data||[];
+
+  if (isAdmin()) {
+    const { data: uData } = await sb.from('user_roles').select('user_id, role');
+    const { data: { users: authUsers } = {} } = await sb.auth.admin?.listUsers?.() || {};
+    state.users = uData || [];
+    state._authUsers = authUsers || [];
+  }
+
+  state.loading = false; render();
+}
+
+async function dbInsert(table, data) {
+  const { data:d, error } = await sb.from(table).insert(data).select().single();
+  if (error) throw error; return d;
+}
+async function dbUpdate(table, id, data) {
+  const { error } = await sb.from(table).update(data).eq('id', id);
+  if (error) throw error;
+}
+async function dbDelete(table, id) {
+  const { error } = await sb.from(table).delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ─── ROUTING ─────────────────────────────────────────────────────────────────
+function showView(v) {
+  state.view = v;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const el = document.getElementById('nav-'+v);
+  if (el) el.classList.add('active');
+  render();
+}
+
+function render() {
+  const mc = document.getElementById('main-content');
+  if (state.loading) { mc.innerHTML=`<div style="display:flex;flex-direction:column;flex:1"><div class="loading-overlay"><div class="spinner"></div></div></div>`; return; }
+  if (state.view==='employees') renderEmployees(mc);
+  else if (state.view==='branches') renderBranches(mc);
+  else if (state.view==='llc') renderLLC(mc);
+  else if (state.view==='tasks') renderTasks(mc);
+  else if (state.view==='summary') renderSummary(mc);
+  else if (state.view==='users') renderUsers(mc);
+}
+
+// ─── EMPLOYEES ───────────────────────────────────────────────────────────────
+function renderEmployees(mc) {
+  const f=state.empFilter.toLowerCase(), bf=state.branchFilter;
+  const filtered=state.employees.filter(e=>
+    (!f||e.name.toLowerCase().includes(f)||(e.role||'').toLowerCase().includes(f))&&
+    (!bf||e.branch_id===bf)
+  );
+  const totalPayroll=state.employees.reduce((s,e)=>s+biWeeklyPay(e),0);
+
+  mc.innerHTML=`
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="topbar">
+        <h2>Employees</h2>
+        <div class="topbar-right">
+          <button class="btn success" onclick="exportExcel()">📊 Export Excel</button>
+          ${isAdmin()?`<button class="btn primary" onclick="openAddEmployee()">+ Add Employee</button>`:''}
+        </div>
+      </div>
+      <div class="content">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="lbl">Employees</div><div class="val">${state.employees.length}</div></div>
+          <div class="stat-card"><div class="lbl">Branches</div><div class="val">${state.branches.length}</div></div>
+          <div class="stat-card"><div class="lbl">Bi-Weekly Payroll</div><div class="val" style="font-size:18px">${fmtMoney(totalPayroll)}</div></div>
+        </div>
+        <div class="filters">
+          <input placeholder="Search name or role…" value="${state.empFilter}" oninput="state.empFilter=this.value;render()">
+          <select onchange="state.branchFilter=this.value;render()">
+            <option value="">All branches</option>
+            ${state.branches.map(b=>`<option value="${b.id}" ${bf===b.id?'selected':''}>${b.name}</option>`).join('')}
+          </select>
+          <button class="btn" onclick="loadAll()">↺ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:36px"></th><th>Name</th><th>Branch</th><th>LLC</th><th>Role</th>
+              <th>$/hr</th><th>Hrs/wk</th><th>Bi-Weekly Wage</th><th>Documents</th>
+              ${isAdmin()?'<th style="width:40px"></th>':''}
+            </tr></thead>
+            <tbody>
+              ${filtered.length===0?`<tr><td colspan="10"><div class="empty-state"><div class="eicon">👥</div>No employees found</div></td></tr>`:
+                filtered.map(e=>{
+                  const docs=Array.isArray(e.docs)?e.docs:[];
+                  return `<tr class="${isAdmin()?'clickable':''}" ${isAdmin()?`onclick="openEditEmployee('${e.id}')"`:''}">
+                    <td><div class="avatar">${initials(e.name)}</div></td>
+                    <td style="font-weight:500">${e.name}${e.status==='terminated'?' <span class="badge badge-red">Terminated</span>':e.status==='inactive'?' <span class="badge badge-gray">Inactive</span>':''}</td>
+                    <td><span class="badge badge-blue">${branchName(e.branch_id)}</span></td>
+                    <td style="color:var(--text2);font-size:12px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.llc||'—'}</td>
+                    <td>${e.role||'—'}</td>
+                    <td>${e.pay_type==='salary'?'—':'$'+(+e.wage||0).toFixed(2)}</td>
+                    <td>${e.pay_type==='salary'?fmtMoney(e.salary)+'/mo':(e.hours||0)+'h'}</td>
+                    <td style="font-weight:600;color:var(--blue)">${fmtMoney(biWeeklyPay(e))}</td>
+                    <td>${docs.slice(0,3).map(d=>`<span class="badge badge-gray" style="font-size:10px;margin:1px">${d}</span>`).join('')}${docs.length>3?`<span class="badge badge-gray" style="font-size:10px">+${docs.length-3}</span>`:''}</td>
+                    ${isAdmin()?`<td onclick="event.stopPropagation()"><button class="btn sm danger" onclick="deleteEmployee('${e.id}','${e.name}')">🗑</button></td>`:''}
+                  </tr>`;
+                }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── BRANCHES ─────────────────────────────────────────────────────────────────
+function renderBranches(mc) {
+  mc.innerHTML=`
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="topbar">
+        <h2>Branches</h2>
+        ${isAdmin()?`<div class="topbar-right"><button class="btn primary" onclick="openAddBranch()">+ Add Branch</button></div>`:''}
+      </div>
+      <div class="content">
+        ${state.branches.length===0?`<div class="empty-state"><div class="eicon">🏢</div>No branches yet</div>`:
+          state.branches.map(b=>{
+            const emps=state.employees.filter(e=>e.branch_id===b.id);
+            const payroll=emps.reduce((s,e)=>s+biWeeklyPay(e),0);
+            return `<div class="group-card">
+              <div class="group-header">
+                <div><strong>${b.name}</strong><span class="meta">${emps.length} employee${emps.length!==1?'s':''} · ${fmtMoney(payroll)}/bi-wk</span></div>
+                ${isAdmin()?`<button class="btn sm danger" onclick="deleteBranch('${b.id}','${b.name}')">🗑 Remove</button>`:''}
+              </div>
+              ${emps.length===0?`<div class="group-member" style="color:var(--text2)">No employees assigned</div>`:
+                emps.map(e=>`<div class="group-member">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div class="avatar">${initials(e.name)}</div>
+                    <div><div style="font-weight:500">${e.name}</div><div style="font-size:11px;color:var(--text2)">${e.role||'—'}</div></div>
+                  </div>
+                  <div style="text-align:right">
+                    <div>${e.pay_type==='salary'?fmtMoney(e.salary)+'/mo':'$'+(+e.wage||0).toFixed(2)+'/hr · '+(e.hours||0)+'h'}</div>
+                    <div style="font-size:12px;color:var(--blue);font-weight:600">${fmtMoney(biWeeklyPay(e))}/bi-wk</div>
+                  </div>
+                </div>`).join('')}
+            </div>`;
+          }).join('')}
+      </div>
+    </div>`;
+}
+
+// ─── LLC ──────────────────────────────────────────────────────────────────────
+function renderLLC(mc) {
+  const llcMap={};
+  state.employees.forEach(e=>{const k=(e.llc||'No LLC').trim();if(!llcMap[k])llcMap[k]=[];llcMap[k].push(e);});
+  const sorted=Object.entries(llcMap).sort((a,b)=>b[1].length-a[1].length);
+  mc.innerHTML=`
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="topbar"><h2>LLC Groups</h2></div>
+      <div class="content">
+        <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Employees grouped by LLC. Multiple members under the same LLC may indicate shared contractor arrangements.</p>
+        ${sorted.length===0?`<div class="empty-state"><div class="eicon">💼</div>No employees yet</div>`:
+          sorted.map(([llc,emps])=>`<div class="group-card">
+            <div class="group-header">
+              <strong>${llc}</strong>
+              <span class="badge ${emps.length>1?'badge-amber':'badge-gray'}">${emps.length} member${emps.length!==1?'s':''}</span>
+            </div>
+            ${emps.map(e=>`<div class="group-member">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="avatar">${initials(e.name)}</div>
+                <div><div style="font-weight:500">${e.name}</div><div style="font-size:11px;color:var(--text2)">${e.role||'—'} · ${branchName(e.branch_id)}</div></div>
+              </div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:260px">
+                ${(Array.isArray(e.docs)?e.docs:[]).map(d=>`<span class="badge badge-gray" style="font-size:10px">📄 ${d}</span>`).join('')}
+              </div>
+            </div>`).join('')}
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ─── TASKS ────────────────────────────────────────────────────────────────────
+function renderTasks(mc) {
+  const tf=state.taskFilter;
+  const filtered=state.tasks.filter(t=>tf==='all'?true:tf==='pending'?!t.done:t.done)
+    .sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;if(a.due_date&&b.due_date)return a.due_date.localeCompare(b.due_date);return 0;});
+  const pending=state.tasks.filter(t=>!t.done).length;
+  mc.innerHTML=`
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="topbar">
+        <h2>Tasks <span style="font-size:13px;font-weight:400;color:var(--text2)">${pending} pending</span></h2>
+        ${isAdmin()?`<div class="topbar-right"><button class="btn primary" onclick="openAddTask()">+ Add Task</button></div>`:''}
+      </div>
+      <div class="content">
+        <div class="filters">
+          <button class="btn ${tf==='all'?'primary':''}" onclick="state.taskFilter='all';render()">All (${state.tasks.length})</button>
+          <button class="btn ${tf==='pending'?'primary':''}" onclick="state.taskFilter='pending';render()">Pending (${pending})</button>
+          <button class="btn ${tf==='done'?'primary':''}" onclick="state.taskFilter='done';render()">Done (${state.tasks.length-pending})</button>
+        </div>
+        ${filtered.length===0?`<div class="empty-state"><div class="eicon">✅</div>No tasks here</div>`:''}
+        ${filtered.map(t=>{
+          const emp=state.employees.find(e=>e.id===t.employee_id);
+          const overdue=!t.done&&isOverdue(t.due_date);
+          return `<div class="task-item ${t.done?'done':''}">
+            <div class="task-check ${t.done?'checked':''}" onclick="${isAdmin()?`toggleTask('${t.id}',${!t.done})`:''}" style="${!isAdmin()?'cursor:default':''}" title="${t.done?'Mark undone':'Mark done'}">
+              ${t.done?'<svg width="11" height="11" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>':''}
+            </div>
+            <div class="task-body">
+              <div class="task-title">${t.title}</div>
+              <div class="task-meta">
+                ${emp?`<span>👤 ${emp.name} · ${branchName(emp.branch_id)}</span>`:''}
+                ${t.due_date?`<span class="${overdue?'overdue':''}">📅 Due ${t.due_date}${overdue?' (overdue)':''}</span>`:''}
+                <span class="badge ${t.priority==='high'?'badge-red':t.priority==='medium'?'badge-amber':'badge-green'}">${t.priority}</span>
+                ${t.reminder_date?`<span class="reminder-chip">🔔 Reminder ${t.reminder_date}</span>`:''}
+              </div>
+            </div>
+            ${isAdmin()?`<button class="btn sm danger" onclick="deleteTask('${t.id}')">🗑</button>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function renderSummary(mc) {
+  const rows = [...state.employees].sort((a,b)=>a.name.localeCompare(b.name));
+  const grandTotal = rows.reduce((s,e)=>s+biWeeklyPay(e),0);
+
+  mc.innerHTML=`
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="topbar">
+        <h2>Payroll Summary</h2>
+        <div class="topbar-right"><button class="btn success" onclick="exportExcel()">📊 Export Excel</button></div>
+      </div>
+      <div class="content">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:36px"></th>
+              <th>Name</th>
+              <th>Branch</th>
+              <th>Pay Type</th>
+              <th>Rate</th>
+              <th style="text-align:right">Bi-Weekly Pay</th>
+            </tr></thead>
+            <tbody>
+              ${rows.length===0?`<tr><td colspan="6"><div class="empty-state"><div class="eicon">📊</div>No employees yet</div></td></tr>`:
+                rows.map(e=>`
+                  <tr>
+                    <td><div class="avatar">${initials(e.name)}</div></td>
+                    <td style="font-weight:500">${e.name}</td>
+                    <td><span class="badge badge-blue">${branchName(e.branch_id)}</span></td>
+                    <td>${e.pay_type==='salary'?'Salary':'Hourly'}</td>
+                    <td>${e.pay_type==='salary'?fmtMoney(e.salary)+'/mo':'$'+(+e.wage||0).toFixed(2)+'/hr · '+(e.hours||0)+'h'}</td>
+                    <td style="text-align:right;font-weight:600;color:var(--blue)">${fmtMoney(biWeeklyPay(e))}</td>
+                  </tr>
+                `).join('')}
+            </tbody>
+            ${rows.length>0?`
+            <tfoot>
+              <tr style="background:var(--bg2)">
+                <td colspan="5" style="font-weight:700;text-align:right">Total Bi-Weekly Payroll</td>
+                <td style="text-align:right;font-weight:700;font-size:15px;color:var(--blue)">${fmtMoney(grandTotal)}</td>
+              </tr>
+            </tfoot>`:''}
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── USERS (admin only) ───────────────────────────────────────────────────────
+function renderUsers(mc) {
+  if (!isAdmin()) { showView('employees'); return; }
+  mc.innerHTML=`
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="topbar"><h2>User Management</h2><div class="topbar-right"><button class="btn" onclick="loadAll()">↺ Refresh</button></div></div>
+      <div class="content">
+        <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Manage access roles for all registered users. Admins can edit data; viewers can only read.</p>
+        <div class="group-card">
+          <div class="group-header"><strong>Registered Users</strong><span class="meta">${state.users.length} total</span></div>
+          <div style="padding:0 16px">
+            ${state.users.length===0?`<div style="padding:16px 0;color:var(--text2)">No users yet — they appear here after signing up.</div>`:
+              state.users.map(u=>`
+                <div class="user-row">
+                  <div>
+                    <div style="font-weight:500;font-size:13px">${u.user_id === currentUser.id ? '(you) ' : ''}${u.user_id}</div>
+                    <span class="role-badge ${u.role==='admin'?'role-admin':'role-viewer'}" style="margin-top:4px">${u.role==='admin'?'⚡ Admin':'👁 Viewer'}</span>
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    ${u.user_id!==currentUser.id?`
+                      <button class="btn sm ${u.role==='admin'?'danger':'primary'}" onclick="changeUserRole('${u.user_id}','${u.role==='admin'?'viewer':'admin'}')">
+                        ${u.role==='admin'?'Demote to Viewer':'Promote to Admin'}
+                      </button>`:
+                      `<span style="font-size:12px;color:var(--text2)">Your account</span>`}
+                  </div>
+                </div>`).join('')}
+          </div>
+        </div>
+        <div style="margin-top:16px;padding:14px 16px;background:var(--amber-bg);border-radius:var(--radius-lg);font-size:13px;color:var(--amber-text)">
+          💡 <strong>Tip:</strong> User IDs shown here are Supabase UUIDs. After someone signs up, refresh this page to see them and set their role.
+        </div>
+      </div>
+    </div>`;
+}
+
+async function changeUserRole(userId, newRole) {
+  try {
+    const { error } = await sb.from('user_roles').update({role: newRole}).eq('user_id', userId);
+    if (error) throw error;
+    const u = state.users.find(x=>x.user_id===userId);
+    if (u) u.role = newRole;
+    render();
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// ─── EMPLOYEE CRUD ────────────────────────────────────────────────────────────
+function toggleAddPayFields() {
+  const isSalary = document.getElementById('f-paytype').value === 'salary';
+  document.getElementById('f-hourly-fields').style.display = isSalary ? 'none' : 'contents';
+  document.getElementById('f-salary-fields').style.display = isSalary ? 'contents' : 'none';
+}
+function openAddEmployee() {
+  if (!isAdmin()) return;
+  showModal(`
+    <h3>Add New Employee</h3>
+    <div class="form-grid">
+      <div class="form-group full"><label>Full Name *</label><input id="f-name" placeholder="Jane Doe" autofocus></div>
+      <div class="form-group"><label>Role</label><input id="f-role" placeholder="e.g. Cashier"></div>
+      <div class="form-group"><label>Branch</label>
+        <select id="f-branch"><option value="">— No branch —</option>${state.branches.map(b=>`<option value="${b.id}">${b.name}</option>`).join('')}</select>
+      </div>
+      <div class="form-group full"><label>Pay Type</label>
+  <select id="f-paytype" onchange="toggleAddPayFields()">
+    <option value="hourly">Hourly Wage</option>
+    <option value="salary">Monthly Salary</option>
+  </select>
+</div>
+<div id="f-hourly-fields" style="display:contents">
+  <div class="form-group"><label>Hourly Wage ($)</label><input id="f-wage" type="number" step="0.01" min="0" placeholder="0.00"></div>
+  <div class="form-group"><label>Hours / Week</label><input id="f-hours" type="number" step="0.5" min="0" placeholder="40"></div>
+</div>
+<div id="f-salary-fields" style="display:none">
+  <div class="form-group full"><label>Monthly Salary ($)</label><input id="f-salary" type="number" step="0.01" min="0" placeholder="0.00"></div>
+</div>
+      <div class="form-group"><label>Start Date</label><input id="f-start" type="date"></div>
+      <div class="form-group"><label>Status</label><select id="f-status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
+      <div class="form-group full"><label>Documents (comma-separated)</label><input id="f-docs" placeholder="ID, I-9, W-4, Work Permit"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="f-notes" placeholder="Any additional notes…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" id="save-emp-btn" onclick="saveEmployee()">Save Employee</button>
+    </div>`);
+}
+
+async function saveEmployee() {
+  const name=document.getElementById('f-name').value.trim();
+  if (!name){alert('Name is required.');return;}
+  const btn=document.getElementById('save-emp-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  const docs=document.getElementById('f-docs').value.split(',').map(d=>d.trim()).filter(Boolean);
+  try {
+    const row=await dbInsert('employees',{name,role:document.getElementById('f-role').value.trim()||null,branch_id:document.getElementById('f-branch').value||null,llc:document.getElementById('f-llc').value.trim()||null,pay_type:document.getElementById('f-paytype').value,wage:parseFloat(document.getElementById('f-wage').value)||0,hours:parseFloat(document.getElementById('f-hours').value)||0,salary:parseFloat(document.getElementById('f-salary').value)||0,start_date:document.getElementById('f-start').value||null,status:document.getElementById('f-status').value,docs,notes:document.getElementById('f-notes').value.trim()||null});
+    state.employees.push(row);state.employees.sort((a,b)=>a.name.localeCompare(b.name));
+    closeModal();render();
+  } catch(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Save Employee';}
+}
+function toggleEditPayFields() {
+  const isSalary = document.getElementById('e-paytype').value === 'salary';
+  document.getElementById('e-hourly-fields').style.display = isSalary ? 'none' : 'contents';
+  document.getElementById('e-salary-fields').style.display = isSalary ? 'contents' : 'none';
+}
+function openEditEmployee(id) {
+  if (!isAdmin()) return;
+  const e=state.employees.find(x=>x.id===id);if(!e)return;
+  const docs=Array.isArray(e.docs)?e.docs:[];
+  showModal(`
+    <h3>Edit Employee</h3>
+    <div class="form-grid">
+      <div class="form-group full"><label>Full Name *</label><input id="e-name" value="${e.name}" autofocus></div>
+      <div class="form-group"><label>Role</label><input id="e-role" value="${e.role||''}"></div>
+      <div class="form-group"><label>Branch</label>
+        <select id="e-branch"><option value="">— No branch —</option>${state.branches.map(b=>`<option value="${b.id}" ${e.branch_id===b.id?'selected':''}>${b.name}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>LLC</label><input id="e-llc" value="${e.llc||''}"></div>
+      <div class="form-group full"><label>Pay Type</label>
+  <select id="e-paytype" onchange="toggleEditPayFields()">
+    <option value="hourly" ${e.pay_type!=='salary'?'selected':''}>Hourly Wage</option>
+    <option value="salary" ${e.pay_type==='salary'?'selected':''}>Monthly Salary</option>
+  </select>
+</div>
+<div id="e-hourly-fields" style="display:${e.pay_type==='salary'?'none':'contents'}">
+  <div class="form-group"><label>Hourly Wage ($)</label><input id="e-wage" type="number" step="0.01" value="${e.wage||0}"></div>
+  <div class="form-group"><label>Hours / Week</label><input id="e-hours" type="number" step="0.5" value="${e.hours||0}"></div>
+</div>
+<div id="e-salary-fields" style="display:${e.pay_type==='salary'?'contents':'none'}">
+  <div class="form-group full"><label>Monthly Salary ($)</label><input id="e-salary" type="number" step="0.01" value="${e.salary||0}"></div>
+</div>
+      <div class="form-group"><label>Start Date</label><input id="e-start" type="date" value="${e.start_date||''}"></div>
+      <div class="form-group"><label>Status</label><select id="e-status"><option value="active" ${e.status==='active'?'selected':''}>Active</option><option value="inactive" ${e.status==='inactive'?'selected':''}>Inactive</option><option value="terminated" ${e.status==='terminated'?'selected':''}>Terminated</option></select></div>
+      <div class="form-group full"><label>Documents (comma-separated)</label><input id="e-docs" value="${docs.join(', ')}"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="e-notes">${e.notes||''}</textarea></div>
+    </div>
+    <div class="modal-footer-split">
+      <button class="btn danger" onclick="deleteEmployee('${e.id}','${e.name}')">🗑 Delete</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn primary" id="upd-emp-btn" onclick="updateEmployee('${e.id}')">Save Changes</button>
+      </div>
+    </div>`);
+}
+
+async function updateEmployee(id) {
+  const name=document.getElementById('e-name').value.trim();
+  if (!name){alert('Name required.');return;}
+  const btn=document.getElementById('upd-emp-btn');btn.disabled=true;btn.textContent='Saving…';
+  const docs=document.getElementById('e-docs').value.split(',').map(d=>d.trim()).filter(Boolean);
+  try {
+    const update={name,role:document.getElementById('e-role').value.trim()||null,branch_id:document.getElementById('e-branch').value||null,llc:document.getElementById('e-llc').value.trim()||null,pay_type:document.getElementById('e-paytype').value,wage:parseFloat(document.getElementById('e-wage').value)||0,hours:parseFloat(document.getElementById('e-hours').value)||0,salary:parseFloat(document.getElementById('e-salary').value)||0,start_date:document.getElementById('e-start').value||null,status:document.getElementById('e-status').value,docs,notes:document.getElementById('e-notes').value.trim()||null};
+    await dbUpdate('employees',id,update);
+    const idx=state.employees.findIndex(x=>x.id===id);
+    if(idx!==-1)state.employees[idx]={...state.employees[idx],...update};
+    closeModal();render();
+  } catch(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Save Changes';}
+}
+
+async function deleteEmployee(id,name) {
+  if(!confirm(`Delete employee "${name}"? This cannot be undone.`))return;
+  try{await dbDelete('employees',id);state.employees=state.employees.filter(e=>e.id!==id);closeModal();render();}
+  catch(e){alert('Error: '+e.message);}
+}
+
+// ─── BRANCH CRUD ──────────────────────────────────────────────────────────────
+function openAddBranch() {
+  if (!isAdmin()) return;
+  showModal(`
+    <h3>Add Branch</h3>
+    <div class="form-grid">
+      <div class="form-group full"><label>Branch Name</label><input id="b-name" placeholder="e.g. Eastside" autofocus></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" id="save-br-btn" onclick="saveBranch()">Add Branch</button>
+    </div>`);
+}
+async function saveBranch() {
+  const name=document.getElementById('b-name').value.trim();if(!name){alert('Name required');return;}
+  const btn=document.getElementById('save-br-btn');btn.disabled=true;btn.textContent='Saving…';
+  try{const row=await dbInsert('branches',{name});state.branches.push(row);state.branches.sort((a,b)=>a.name.localeCompare(b.name));closeModal();render();}
+  catch(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Add Branch';}
+}
+async function deleteBranch(id,name) {
+  if(state.employees.some(e=>e.branch_id===id)){alert(`Cannot delete "${name}" — employees are still assigned to it.`);return;}
+  if(!confirm(`Delete branch "${name}"?`))return;
+  try{await dbDelete('branches',id);state.branches=state.branches.filter(b=>b.id!==id);render();}
+  catch(e){alert('Error: '+e.message);}
+}
+
+// ─── TASK CRUD ────────────────────────────────────────────────────────────────
+function openAddTask() {
+  if (!isAdmin()) return;
+  showModal(`
+    <h3>Add Task</h3>
+    <div class="form-grid">
+      <div class="form-group full"><label>Task Title *</label><input id="t-title" placeholder="e.g. Collect W-4 from…" autofocus></div>
+      <div class="form-group full"><label>Linked Employee</label>
+        <select id="t-emp"><option value="">— Not linked —</option>${state.employees.map(e=>`<option value="${e.id}">${e.name} (${branchName(e.branch_id)})</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Due Date</label><input id="t-due" type="date"></div>
+      <div class="form-group"><label>Reminder Date</label><input id="t-reminder" type="date"></div>
+      <div class="form-group full"><label>Priority</label><select id="t-priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" id="save-task-btn" onclick="saveTask()">Add Task</button>
+    </div>`);
+}
+async function saveTask() {
+  const title=document.getElementById('t-title').value.trim();if(!title){alert('Title required');return;}
+  const btn=document.getElementById('save-task-btn');btn.disabled=true;btn.textContent='Saving…';
+  try{const row=await dbInsert('tasks',{title,employee_id:document.getElementById('t-emp').value||null,due_date:document.getElementById('t-due').value||null,reminder_date:document.getElementById('t-reminder').value||null,priority:document.getElementById('t-priority').value,done:false});state.tasks.push(row);closeModal();render();}
+  catch(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Add Task';}
+}
+async function toggleTask(id,newDone) {
+  if (!isAdmin()) return;
+  try{await dbUpdate('tasks',id,{done:newDone,done_at:newDone?new Date().toISOString():null});const t=state.tasks.find(x=>x.id===id);if(t){t.done=newDone;t.done_at=newDone?new Date().toISOString():null;}render();}
+  catch(e){alert('Error: '+e.message);}
+}
+async function deleteTask(id) {
+  if(!confirm('Delete this task?'))return;
+  try{await dbDelete('tasks',id);state.tasks=state.tasks.filter(t=>t.id!==id);render();}
+  catch(e){alert('Error: '+e.message);}
+}
+
+// ─── EXCEL EXPORT ─────────────────────────────────────────────────────────────
+function exportExcel() {
+  const wb=XLSX.utils.book_new();
+  const empRows = [['ID','Name','Role','Branch','LLC','Pay Type','Hourly Wage ($)','Hours/Week','Monthly Salary ($)','Bi-Weekly Total ($)','Documents','Start Date','Status','Notes']];
+  state.employees.forEach(e=>{const docs=Array.isArray(e.docs)?e.docs.join(', '):'';empRows.push([e.id,e.name,e.role||'',branchName(e.branch_id),e.llc||'',e.pay_type||'hourly',+(+e.wage||0).toFixed(2),+(+e.hours||0),+(+e.salary||0).toFixed(2),+biWeeklyPay(e).toFixed(2),docs,e.start_date||'',e.status||'',e.notes||'']);});
+  const wsE=XLSX.utils.aoa_to_sheet(empRows);wsE['!cols']=[10,22,14,14,18,14,12,16,28,12,10,24].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,wsE,'Employees');
+  const brRows=[['Branch','Employees','Bi-Weekly Payroll ($)']];
+  state.branches.forEach(b=>{const emps=state.employees.filter(e=>e.branch_id===b.id);brRows.push([b.name,emps.length,+emps.reduce((s,e)=>s+biWeeklyPay(e),0).toFixed(2)]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(brRows),'Branches');
+  const llcMap={};state.employees.forEach(e=>{const k=e.llc||'No LLC';if(!llcMap[k])llcMap[k]=[];llcMap[k].push(e);});
+  const llcRows=[['LLC','Employee','Role','Branch','Bi-Weekly Wage ($)']];
+  Object.entries(llcMap).forEach(([llc,emps])=>emps.forEach(e=>llcRows.push([llc,e.name,e.role||'',branchName(e.branch_id),+biWeeklyPay(e).toFixed(2)])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(llcRows),'LLC Groups');
+  const tRows=[['Title','Employee','Branch','Due Date','Reminder','Priority','Status','Completed At']];
+  state.tasks.forEach(t=>{const emp=state.employees.find(e=>e.id===t.employee_id);tRows.push([t.title,emp?emp.name:'—',emp?branchName(emp.branch_id):'—',t.due_date||'',t.reminder_date||'',t.priority,t.done?'Done':'Pending',t.done_at||'']);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(tRows),'Tasks');
+  XLSX.writeFile(wb,`workforce_export_${todayStr()}.xlsx`);
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function showModal(html){document.getElementById('modal-root').innerHTML=`<div class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    await onSignedIn(session.user);
+  } else {
+    document.getElementById('auth-screen').style.display = '';
+  }
+
+  // Keep session in sync across tabs
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      await onSignedIn(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      document.getElementById('app-screen').style.display = 'none';
+      document.getElementById('auth-screen').style.display = '';
+    }
+  });
+
+  // Enter key on auth form
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('auth-screen').style.display !== 'none') authSubmit();
+  });
+})();
+</script>
+</body>
+</html>

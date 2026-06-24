@@ -765,8 +765,24 @@ function openEditEmployee(id) {
         <div class="form-group full"><label>Monthly Salary ($)</label><input id="e-salary" type="number" step="0.01" value="${e.salary||0}"></div>
       </div>
       <div class="form-group"><label>Start Date</label><input id="e-start" type="date" value="${e.start_date||''}"></div>
-      <div class="form-group"><label>Status</label><select id="f-status" onchange="toggleAddTerminatedDate()"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
-<div class="form-group" id="f-terminated-wrap" style="display:none"><label>Terminated Date</label><input id="f-terminated" type="date"></div>
+      <div class="form-group">
+  <label>Status</label>
+  <select id="e-status" onchange="toggleEditTerminatedDate()">
+    <option value="active" ${e.status==='active'?'selected':''}>Active</option>
+    <option value="inactive" ${e.status==='inactive'?'selected':''}>Inactive</option>
+    <option value="terminated" ${e.status==='terminated'?'selected':''}>Terminated</option>
+  </select>
+</div>
+
+<div class="form-group"
+     id="e-terminated-wrap"
+     style="display:${e.status==='terminated'?'':'none'}">
+  <label>Terminated Date</label>
+  <input
+      id="e-terminated"
+      type="date"
+      value="${e.terminated_date||''}">
+</div>
       <div class="form-group full"><label>Documents (comma-separated)</label><input id="e-docs" value="${docs.join(', ')}"></div>
       <div class="form-group full"><label>Notes</label><textarea id="e-notes">${e.notes||''}</textarea></div>
     </div>

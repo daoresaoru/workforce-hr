@@ -462,9 +462,9 @@ function renderEmployees(mc) {
         <div class="stat-grid">
   <div class="stat-card"><div class="lbl">Active Employees</div><div class="val">${filtered.filter(e=>e.status==='active').length}</div></div>
   <div class="stat-card"><div class="lbl">W-2</div><div class="val">${filtered.filter(e=>(e.worker_type||'W-2')==='W-2').length}</div></div>
-  <div class="stat-card"><div class="lbl">Own LLC</div><div class="val">${filtered.filter(e=>e.worker_type==='Own LLC').length}</div></div>
-  <div class="stat-card"><div class="lbl">Third Party LLC</div><div class="val">${filtered.filter(e=>e.worker_type==='Third Party LLC').length}</div></div>
-  <div class="stat-card"><div class="lbl">Individual</div><div class="val">${filtered.filter(e=>e.worker_type==='Individual').length}</div></div>
+  <div class="stat-card"><div class="lbl">1099 Contractors</div><div class="val">${filtered.filter(e=>e.worker_type==='Own LLC').length}</div></div>
+  <div class="stat-card"><div class="lbl">1099 Contractors Third Party LLC</div><div class="val">${filtered.filter(e=>e.worker_type==='Third Party LLC').length}</div></div>
+  <div class="stat-card"><div class="lbl">Individual Contractors</div><div class="val">${filtered.filter(e=>e.worker_type==='Individual').length}</div></div>
   <div class="stat-card"><div class="lbl">WCC</div><div class="val">${filtered.filter(e=>e.worker_type==='WCC').length}</div></div>
 </div>
         <div class="filters">

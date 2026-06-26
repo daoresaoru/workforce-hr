@@ -405,7 +405,12 @@ function renderEmployees(mc) {
       </div>
       <div class="content">
         <div class="stat-grid">
-          <div class="stat-card"><div class="lbl">Active Employees</div><div class="val">${state.employees.filter(e=>e.status==='active').length}</div></div>
+          <div class="stat-card">
+    <div class="lbl">Active Employees</div>
+    <div class="val">
+        ${filtered.filter(e => e.status === 'active').length}
+    </div>
+</div>
           <div class="stat-card"><div class="lbl">Branches</div><div class="val">${state.branches.length}</div></div>
           <div class="stat-card"><div class="lbl">Bi-Weekly Payroll</div><div class="val" style="font-size:18px">${fmtMoney(totalPayroll)}</div></div>
         </div>

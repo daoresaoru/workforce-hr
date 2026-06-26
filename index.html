@@ -201,6 +201,7 @@
       <div class="nav-section">
         <div class="nav-label">Database</div>
         <div class="nav-item active" id="nav-employees" onclick="showView('employees')">👥 Employees</div>
+        <div class="nav-item" id="nav-terminated" onclick="showView('terminated')">🚫 Terminated</div>
         <div class="nav-item" id="nav-branches" onclick="showView('branches')">🏢 Branches</div>
         <div class="nav-item" id="nav-llc" onclick="showView('llc')">💼 LLC Groups</div>
         <div class="nav-item" id="nav-tasks" onclick="showView('tasks')">✅ Tasks</div>
@@ -378,6 +379,7 @@ function render() {
   const mc = document.getElementById('main-content');
   if (state.loading) { mc.innerHTML=`<div style="display:flex;flex-direction:column;flex:1"><div class="loading-overlay"><div class="spinner"></div></div></div>`; return; }
   if (state.view==='employees') renderEmployees(mc);
+  else if (state.view==='terminated') renderTerminated(mc);
   else if (state.view==='branches') renderBranches(mc);
   else if (state.view==='llc') renderLLC(mc);
   else if (state.view==='tasks') renderTasks(mc);
@@ -452,6 +454,164 @@ function renderEmployees(mc) {
         </div>
       </div>
     </div>`;
+}
+
+function renderTerminated(mc) {
+  const f = state.empFilter.toLowerCase(),
+        bf = state.branchFilter;
+
+  const filtered = state.employees.filter(e =>
+    e.status === 'terminated' &&
+    (!f || e.name.toLowerCase().includes(f) || (e.role || '').toLowerCase().includes(f)) &&
+    (!bf || e.branch_id === bf)
+  );
+
+  mc.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="topbar">
+        <h2>Terminated Employees</h2>
+        <div class="topbar-right">
+          <button class="btn" onclick="loadAll()">↺ Refresh</button>
+        </div>
+      </div>
+
+      <div class="content">
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="lbl">Terminated Employees</div>
+            <div class="val">${filtered.length}</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="lbl">Branches Represented</div>
+            <div class="val">${new Set(filtered.map(e => e.branch_id).filter(Boolean)).size}</div>
+          </div>
+        </div>
+
+        <div class="filters">
+          <input
+            placeholder="Search name or role…"
+            value="${state.empFilter}"
+            oninput="state.empFilter=this.value;render()">
+
+          <select onchange="state.branchFilter=this.value;render()">
+            <option value="">All branches</option>
+            ${state.branches.map(b =>
+              `<option value="${b.id}" ${bf===b.id?'selected':''}>${b.name}</option>`
+            ).join('')}
+          </select>
+
+          <button class="btn" onclick="loadAll()">↺ Refresh</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px"></th>
+                <th>Name</th>
+                <th>Branch</th>
+                <th>LLC</th>
+                <th>Role</th>
+                <th>Pay Type</th>
+                <th>Rate</th>
+                <th>Terminated</th>
+                <th>Documents</th>
+                ${isAdmin() ? '<th style="width:40px"></th>' : ''}
+              </tr>
+            </thead>
+
+            <tbody>
+
+            ${
+              filtered.length === 0 ?
+
+              `<tr>
+                <td colspan="10">
+                  <div class="empty-state">
+                    <div class="eicon">🚫</div>
+                    No terminated employees
+                  </div>
+                </td>
+              </tr>`
+
+              :
+
+              filtered.map(e => {
+
+                const docs = Array.isArray(e.docs) ? e.docs : [];
+                const isSalary = e.pay_type === 'salary';
+
+                return `
+                  <tr class="${isAdmin() ? 'clickable' : ''}"
+                      ${isAdmin() ? `onclick="openEditEmployee('${e.id}')"` : ''}>
+
+                    <td>
+                      <div class="avatar">${initials(e.name)}</div>
+                    </td>
+
+                    <td style="font-weight:500">
+                      ${e.name}
+                    </td>
+
+                    <td>
+                      <span class="badge badge-blue">
+                        ${branchName(e.branch_id)}
+                      </span>
+                    </td>
+
+                    <td style="color:var(--text2);font-size:12px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                      ${e.llc || '—'}
+                    </td>
+
+                    <td>${e.role || '—'}</td>
+
+                    <td>${isSalary ? 'Salary' : 'Hourly'}</td>
+
+                    <td>
+                      ${isSalary
+                        ? fmtMoney(e.salary) + '/mo'
+                        : '$' + (+e.wage || 0).toFixed(2) + '/hr · ' + (e.hours || 0) + 'h'}
+                    </td>
+
+                    <td>
+                      ${e.terminated_date || '—'}
+                    </td>
+
+                    <td>
+                      ${docs.slice(0,3).map(d =>
+                        `<span class="badge badge-gray" style="font-size:10px;margin:1px">${d}</span>`
+                      ).join('')}
+                      ${docs.length > 3
+                        ? `<span class="badge badge-gray" style="font-size:10px">+${docs.length-3}</span>`
+                        : ''}
+                    </td>
+
+                    ${
+                      isAdmin()
+                      ? `<td onclick="event.stopPropagation()">
+                          <button class="btn sm danger"
+                            onclick="deleteEmployee('${e.id}','${e.name}')">
+                            🗑
+                          </button>
+                        </td>`
+                      : ''
+                    }
+
+                  </tr>
+                `;
+
+              }).join('')
+            }
+
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  `;
 }
 
 // ─── BRANCHES ─────────────────────────────────────────────────────────────────

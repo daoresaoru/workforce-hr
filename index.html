@@ -857,6 +857,8 @@ function openAddEmployee() {
   <div class="form-group full"><label>Monthly Salary ($)</label><input id="f-salary" type="number" step="0.01" min="0" placeholder="0.00"></div>
 </div>
       <div class="form-group"><label>Start Date</label><input id="f-start" type="date"></div>
+      <div class="form-group"><label>Work Days</label><input id="f-workdays" placeholder="e.g. 5"></div>
+<div class="form-group"><label>Days Off</label><input id="f-daysoff" placeholder="e.g. 2"></div>
       <div class="form-group"><label>Terminated Date</label><input id="f-terminated" type="date"></div>
       <div class="form-group"><label>Status</label><select id="f-status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
       <div class="form-group full"><label>Documents (comma-separated)</label><input id="f-docs" placeholder="ID, I-9, W-4, Work Permit"></div>
@@ -875,7 +877,8 @@ async function saveEmployee() {
   btn.disabled=true;btn.textContent='Saving…';
   const docs=document.getElementById('f-docs').value.split(',').map(d=>d.trim()).filter(Boolean);
   try {
-    const row=await dbInsert('employees',{name,role:document.getElementById('f-role').value.trim()||null,branch_id:document.getElementById('f-branch').value||null,llc:document.getElementById('f-llc').value.trim()||null,worker_type:document.getElementById('f-workertype').value,pay_type:document.getElementById('f-paytype').value,wage:parseFloat(document.getElementById('f-wage').value)||0,hours:parseFloat(document.getElementById('f-hours').value)||0,salary:parseFloat(document.getElementById('f-salary').value)||0,start_date:document.getElementById('f-start').value||null,terminated_date:document.getElementById('f-terminated').value||null,status:document.getElementById('f-status').value,docs,notes:document.getElementById('f-notes').value.trim()||null});
+    const row=await dbInsert('employees',{name,role:document.getElementById('f-role').value.trim()||null,branch_id:document.getElementById('f-branch').value||null,worker_type:document.getElementById('f-workertype').value,pay_type:document.getElementById('f-paytype').value,wage:parseFloat(document.getElementById('f-wage').value)||0,hours:parseFloat(document.getElementById('f-hours').value)||0,salary:parseFloat(document.getElementById('f-salary').value)||0,start_date:document.getElementById('f-start').value||null,work_days:document.getElementById('f-workdays').value||null,
+days_off:document.getElementById('f-daysoff').value||null,terminated_date:document.getElementById('f-terminated').value||null,status:document.getElementById('f-status').value,docs,notes:document.getElementById('f-notes').value.trim()||null});
     state.employees.push(row);state.employees.sort((a,b)=>a.name.localeCompare(b.name));
     closeModal();render();
   } catch(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Save Employee';}
@@ -921,6 +924,8 @@ function openEditEmployee(id) {
   <div class="form-group full"><label>Monthly Salary ($)</label><input id="e-salary" type="number" step="0.01" value="${e.salary||0}"></div>
 </div>
       <div class="form-group"><label>Start Date</label><input id="e-start" type="date" value="${e.start_date||''}"></div>
+      <div class="form-group"><label>Work Days</label><input id="e-workdays" value="${e.work_days||''}"></div>
+<div class="form-group"><label>Days Off</label><input id="e-daysoff" value="${e.days_off||''}"></div>
       <div class="form-group"><label>Terminated Date</label><input id="e-terminated" type="date" value="${e.terminated_date||''}"></div>
       <div class="form-group"><label>Status</label><select id="e-status"><option value="active" ${e.status==='active'?'selected':''}>Active</option><option value="inactive" ${e.status==='inactive'?'selected':''}>Inactive</option><option value="terminated" ${e.status==='terminated'?'selected':''}>Terminated</option></select></div>
       <div class="form-group full"><label>Documents (comma-separated)</label><input id="e-docs" value="${docs.join(', ')}"></div>
@@ -941,7 +946,8 @@ async function updateEmployee(id) {
   const btn=document.getElementById('upd-emp-btn');btn.disabled=true;btn.textContent='Saving…';
   const docs=document.getElementById('e-docs').value.split(',').map(d=>d.trim()).filter(Boolean);
   try {
-    const update={name,role:document.getElementById('e-role').value.trim()||null,branch_id:document.getElementById('e-branch').value||null,llc:document.getElementById('e-llc').value.trim()||null,worker_type:document.getElementById('e-workertype').value,pay_type:document.getElementById('e-paytype').value,wage:parseFloat(document.getElementById('e-wage').value)||0,hours:parseFloat(document.getElementById('e-hours').value)||0,salary:parseFloat(document.getElementById('e-salary').value)||0,start_date:document.getElementById('e-start').value||null,terminated_date:document.getElementById('e-terminated').value||null,status:document.getElementById('e-status').value,docs,notes:document.getElementById('e-notes').value.trim()||null};
+    const update={name,role:document.getElementById('e-role').value.trim()||null,branch_id:document.getElementById('e-branch').value||null,llc:document.getElementById('e-llc').value.trim()||null,worker_type:document.getElementById('e-workertype').value,pay_type:document.getElementById('e-paytype').value,wage:parseFloat(document.getElementById('e-wage').value)||0,hours:parseFloat(document.getElementById('e-hours').value)||0,salary:parseFloat(document.getElementById('e-salary').value)||0,start_date:document.getElementById('e-start').value||null,work_days:document.getElementById('e-workdays').value||null,
+days_off:document.getElementById('e-daysoff').value||null,terminated_date:document.getElementById('e-terminated').value||null,status:document.getElementById('e-status').value,docs,notes:document.getElementById('e-notes').value.trim()||null};
     await dbUpdate('employees',id,update);
     const idx=state.employees.findIndex(x=>x.id===id);
     if(idx!==-1)state.employees[idx]={...state.employees[idx],...update};
